@@ -51,7 +51,7 @@ class ClienteController extends Controller
             'estado' => ['nullable', 'boolean'],
         ]);
 
-        $datos['estado'] = $request->has('estado');
+        $datos['estado'] = true;
 
         Cliente::create($datos);
 
@@ -97,7 +97,7 @@ class ClienteController extends Controller
             'estado' => ['nullable', 'boolean'],
         ]);
 
-        $datos['estado'] = $request->has('estado');
+        $datos['estado'] = $cliente->estado;
 
         $cliente->update($datos);
 
