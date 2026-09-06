@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Cliente extends Model
 {
@@ -15,4 +16,13 @@ class Cliente extends Model
         'direccion',
         'estado',
     ];
+
+    protected $casts = [
+        'estado' => 'boolean',
+    ];
+
+    public function creditos(): HasMany
+    {
+        return $this->hasMany(Credito::class);
+    }
 }
