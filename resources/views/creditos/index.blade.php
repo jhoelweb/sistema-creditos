@@ -132,6 +132,7 @@
 
     <h1>Gestión de Créditos</h1>
 
+
     @if(session('success'))
 
         <div class="mensaje">
@@ -191,12 +192,18 @@
         </form>
 
 
-        <a
-            href="{{ route('creditos.create') }}"
-            class="btn btn-nuevo"
-        >
-            Nuevo crédito
-        </a>
+        {{-- Solo Administrador puede crear créditos --}}
+
+        @if(Auth::user()->rol === 'Administrador')
+
+            <a
+                href="{{ route('creditos.create') }}"
+                class="btn btn-nuevo"
+            >
+                Nuevo crédito
+            </a>
+
+        @endif
 
     </div>
 
@@ -208,23 +215,14 @@
             <tr>
 
                 <th>ID</th>
-
                 <th>Cliente</th>
-
                 <th>Fecha</th>
-
                 <th>Monto</th>
-
                 <th>Interés</th>
-
                 <th>Total</th>
-
                 <th>Saldo</th>
-
                 <th>Vencimiento</th>
-
                 <th>Estado</th>
-
                 <th>Acciones</th>
 
             </tr>
@@ -244,52 +242,38 @@
 
 
                     <td>
-
                         {{ $credito->cliente->nombres }}
                         {{ $credito->cliente->apellidos }}
-
                     </td>
 
 
                     <td>
-
                         {{ $credito->fecha_otorgamiento->format('d/m/Y') }}
-
                     </td>
 
 
                     <td>
-
                         ${{ number_format($credito->monto, 2) }}
-
                     </td>
 
 
                     <td>
-
                         {{ $credito->tasa_interes }}%
-
                     </td>
 
 
                     <td>
-
                         ${{ number_format($credito->total_credito, 2) }}
-
                     </td>
 
 
                     <td>
-
                         ${{ number_format($credito->saldo, 2) }}
-
                     </td>
 
 
                     <td>
-
                         {{ $credito->fecha_vencimiento->format('d/m/Y') }}
-
                     </td>
 
 
@@ -326,6 +310,8 @@
 
                     <td>
 
+                        {{-- Todos pueden consultar --}}
+
                         <a
                             href="{{ route('creditos.show', $credito) }}"
                             class="btn btn-ver"
@@ -334,35 +320,41 @@
                         </a>
 
 
-                        <a
-                            href="{{ route('creditos.edit', $credito) }}"
-                            class="btn btn-editar"
-                        >
-                            Editar
-                        </a>
+                        {{-- Solo Administrador puede editar o cancelar --}}
 
+                        @if(Auth::user()->rol === 'Administrador')
 
-                        @if($credito->estado === 'Activo')
-
-                            <form
-                                action="{{ route('creditos.destroy', $credito) }}"
-                                method="POST"
-                                style="display:inline;"
+                            <a
+                                href="{{ route('creditos.edit', $credito) }}"
+                                class="btn btn-editar"
                             >
+                                Editar
+                            </a>
 
-                                @csrf
 
-                                @method('DELETE')
+                            @if($credito->estado === 'Activo')
 
-                                <button
-                                    type="submit"
-                                    class="btn btn-cancelar"
-                                    onclick="return confirm('¿Deseas cancelar este crédito?')"
+                                <form
+                                    action="{{ route('creditos.destroy', $credito) }}"
+                                    method="POST"
+                                    style="display:inline;"
                                 >
-                                    Cancelar
-                                </button>
 
-                            </form>
+                                    @csrf
+
+                                    @method('DELETE')
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-cancelar"
+                                        onclick="return confirm('¿Deseas cancelar este crédito?')"
+                                    >
+                                        Cancelar
+                                    </button>
+
+                                </form>
+
+                            @endif
 
                         @endif
 
@@ -379,7 +371,6 @@
                         class="sin-resultados"
                     >
                         No hay créditos registrados.
-
                     </td>
 
                 </tr>

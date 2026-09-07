@@ -3,7 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Cliente;
+use App\Models\Pago;
 
 class Credito extends Model
 {
@@ -28,8 +29,13 @@ class Credito extends Model
         'saldo' => 'decimal:2',
     ];
 
-    public function cliente(): BelongsTo
+    public function cliente()
     {
         return $this->belongsTo(Cliente::class);
+    }
+
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class);
     }
 }

@@ -85,51 +85,70 @@
 
     <h1>Detalle del Crédito #{{ $credito->id }}</h1>
 
+
     <div class="dato">
         <strong>Cliente:</strong>
+
         {{ $credito->cliente->nombres }}
         {{ $credito->cliente->apellidos }}
     </div>
 
+
     <div class="dato">
         <strong>Documento:</strong>
+
         {{ $credito->cliente->documento_identidad }}
     </div>
 
+
     <div class="dato">
         <strong>Fecha de otorgamiento:</strong>
+
         {{ $credito->fecha_otorgamiento->format('d/m/Y') }}
     </div>
 
+
     <div class="dato">
         <strong>Monto:</strong>
+
         ${{ number_format($credito->monto, 2) }}
     </div>
 
+
     <div class="dato">
         <strong>Tasa de interés:</strong>
+
         {{ $credito->tasa_interes }}%
     </div>
 
+
     <div class="dato">
         <strong>Plazo:</strong>
+
         {{ $credito->plazo }} meses
     </div>
 
+
     <div class="dato">
         <strong>Total del crédito:</strong>
+
         ${{ number_format($credito->total_credito, 2) }}
     </div>
 
+
     <div class="dato">
         <strong>Saldo pendiente:</strong>
+
         ${{ number_format($credito->saldo, 2) }}
     </div>
 
+
     <div class="dato">
         <strong>Fecha de vencimiento:</strong>
+
         {{ $credito->fecha_vencimiento->format('d/m/Y') }}
     </div>
+
 
     <div class="dato">
 
@@ -137,15 +156,21 @@
 
         @if($credito->estado === 'Activo')
 
-            <span class="activo">Activo</span>
+            <span class="activo">
+                Activo
+            </span>
 
         @elseif($credito->estado === 'Pagado')
 
-            <span class="pagado">Pagado</span>
+            <span class="pagado">
+                Pagado
+            </span>
 
         @elseif($credito->estado === 'Vencido')
 
-            <span class="vencido">Vencido</span>
+            <span class="vencido">
+                Vencido
+            </span>
 
         @else
 
@@ -157,6 +182,9 @@
 
     </div>
 
+
+    {{-- Todos pueden volver --}}
+
     <a
         href="{{ route('creditos.index') }}"
         class="boton volver"
@@ -164,12 +192,20 @@
         Volver
     </a>
 
-    <a
-        href="{{ route('creditos.edit', $credito) }}"
-        class="boton editar"
-    >
-        Editar
-    </a>
+
+    {{-- Solo Administrador puede editar --}}
+
+    @if(Auth::user()->rol === 'Administrador')
+
+        <a
+            href="{{ route('creditos.edit', $credito) }}"
+            class="boton editar"
+        >
+            Editar
+        </a>
+
+    @endif
+
 
 </div>
 

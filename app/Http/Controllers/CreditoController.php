@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreCreditoRequest;
+use App\Http\Requests\UpdateCreditoRequest;
 use App\Models\Cliente;
 use App\Models\Credito;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 
 class CreditoController extends Controller
 {
     public function index(Request $request)
     {
-        // Actualizar créditos vencidos automáticamente
         Credito::where('estado', 'Activo')
             ->where('saldo', '>', 0)
             ->whereDate('fecha_vencimiento', '<', now()->toDateString())
@@ -40,15 +40,9 @@ class CreditoController extends Controller
         return view('creditos.create', compact('clientes'));
     }
 
-    public function store(Request $request)
+    public function store(StoreCreditoRequest $request)
     {
-        $datos = $request->validate([
-            'cliente_id' => ['required', 'exists:clientes,id'],
-            'fecha_otorgamiento' => ['required', 'date'],
-            'monto' => ['required', 'numeric', 'min:0.01'],
-            'tasa_interes' => ['required', 'numeric', 'min:0'],
-            'plazo' => ['required', 'integer', 'min:1'],
-        ]);
+        $datos = $request->validated();
 
         $monto = (float) $datos['monto'];
         $tasa = (float) $datos['tasa_interes'];
@@ -59,18 +53,20 @@ class CreditoController extends Controller
         // Calcular total
         $total = $monto + $interes;
 
-        // Guardar cálculos
+        // Valores iniciales del crédito
         $datos['total_credito'] = $total;
         $datos['saldo'] = $total;
 
         // Calcular fecha de vencimiento
-        $datos['fecha_vencimiento'] = Carbon::parse(
-            $datos['fecha_otorgamiento']
-        )->addMonths(
-            $datos['plazo']
-        )->format('Y-m-d');
+        $datos['fecha_vencimiento'] = date(
+            'Y-m-d',
+            strtotime(
+                '+' . (int) $datos['plazo'] . ' months',
+                strtotime($datos['fecha_otorgamiento'])
+            )
+        );
 
-        // Estado inicial
+        // Todo crédito nuevo inicia activo
         $datos['estado'] = 'Activo';
 
         Credito::create($datos);
@@ -96,55 +92,51 @@ class CreditoController extends Controller
         return view('creditos.edit', compact('credito', 'clientes'));
     }
 
-    public function update(Request $request, Credito $credito)
-    {
-        $datos = $request->validate([
-            'cliente_id' => ['required', 'exists:clientes,id'],
-            'fecha_otorgamiento' => ['required', 'date'],
-            'monto' => ['required', 'numeric', 'min:0.01'],
-            'tasa_interes' => ['required', 'numeric', 'min:0'],
-            'plazo' => ['required', 'integer', 'min:1'],
-        ]);
+    public function update(
+        UpdateCreditoRequest $request,
+        Credito $credito
+    ) {
+        $datos = $request->validated();
 
         $monto = (float) $datos['monto'];
         $tasa = (float) $datos['tasa_interes'];
 
-        // Calcular interés
+        // Recalcular interés
         $interes = $monto * ($tasa / 100);
 
-        // Calcular total
+        // Recalcular total
         $total = $monto + $interes;
 
         $datos['total_credito'] = $total;
 
         /*
-         * Si el crédito todavía no tiene pagos,
-         * el saldo será igual al total.
-         *
-         * La lógica de pagos la agregaremos
-         * en el módulo Pagos.
-         */
-        $datos['saldo'] = $total;
+        Mantener temporalmente el saldo actual.
+        Más adelante ajustaremos esta lógica para que,
+        si el crédito ya tiene pagos, el saldo se calcule
+        correctamente.
+        */
+        $datos['saldo'] = $credito->saldo;
 
-        // Calcular nueva fecha de vencimiento
-        $datos['fecha_vencimiento'] = Carbon::parse(
-            $datos['fecha_otorgamiento']
-        )->addMonths(
-            $datos['plazo']
-        )->format('Y-m-d');
+        // Recalcular fecha de vencimiento
+        $datos['fecha_vencimiento'] = date(
+            'Y-m-d',
+            strtotime(
+                '+' . (int) $datos['plazo'] . ' months',
+                strtotime($datos['fecha_otorgamiento'])
+            )
+        );
 
-        // No cambiar automáticamente un crédito cancelado
-        // mientras se está editando.
-        if ($credito->estado !== 'Cancelado') {
-
-            if (
-                $datos['saldo'] > 0 &&
-                Carbon::parse($datos['fecha_vencimiento'])->isPast()
-            ) {
-                $datos['estado'] = 'Vencido';
-            } else {
-                $datos['estado'] = 'Activo';
-            }
+        // Mantener un crédito cancelado como cancelado
+        if ($credito->estado === 'Cancelado') {
+            $datos['estado'] = 'Cancelado';
+        } elseif ($credito->saldo <= 0) {
+            $datos['estado'] = 'Pagado';
+        } elseif (
+            strtotime($datos['fecha_vencimiento']) < strtotime(date('Y-m-d'))
+        ) {
+            $datos['estado'] = 'Vencido';
+        } else {
+            $datos['estado'] = 'Activo';
         }
 
         $credito->update($datos);
@@ -156,7 +148,6 @@ class CreditoController extends Controller
 
     public function destroy(Credito $credito)
     {
-        // Cancelar crédito
         $credito->update([
             'estado' => 'Cancelado'
         ]);
