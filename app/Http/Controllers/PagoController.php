@@ -11,23 +11,109 @@ class PagoController extends Controller
 {
     public function index()
     {
-        $pagos = Pago::with('credito.cliente')
-            ->orderBy('id', 'desc')
-            ->get();
+        $usuario = auth()->user();
 
-        return view('pagos.index', compact('pagos'));
+        // ========================================
+        // ADMINISTRADOR
+        // ========================================
+
+        if ($usuario->rol === 'Administrador') {
+
+            // El administrador puede ver todos los pagos
+            $pagos = Pago::with('credito.cliente')
+                ->orderBy('id', 'desc')
+                ->get();
+        }
+
+        // ========================================
+        // CLIENTE / USUARIO
+        // ========================================
+
+        else {
+
+            // Verificar que tenga cliente asociado
+            if (!$usuario->cliente_id) {
+
+                abort(
+                    403,
+                    'Tu cuenta no está asociada a un cliente.'
+                );
+            }
+
+            // Solamente mostrar pagos
+            // pertenecientes a sus créditos
+            $pagos = Pago::with('credito.cliente')
+                ->whereHas('credito', function ($query) use ($usuario) {
+
+                    $query->where(
+                        'cliente_id',
+                        $usuario->cliente_id
+                    );
+
+                })
+                ->orderBy('id', 'desc')
+                ->get();
+        }
+
+        return view(
+            'pagos.index',
+            compact('pagos')
+        );
     }
+
 
     public function create()
     {
-        $creditos = Credito::with('cliente')
-            ->where('estado', 'Activo')
-            ->where('saldo', '>', 0)
-            ->orderBy('id', 'desc')
-            ->get();
+        $usuario = auth()->user();
 
-        return view('pagos.create', compact('creditos'));
+        // ========================================
+        // ADMINISTRADOR
+        // ========================================
+
+        if ($usuario->rol === 'Administrador') {
+
+            // Puede registrar pagos sobre
+            // cualquier crédito activo
+            $creditos = Credito::with('cliente')
+                ->where('estado', 'Activo')
+                ->where('saldo', '>', 0)
+                ->orderBy('id', 'desc')
+                ->get();
+        }
+
+        // ========================================
+        // CLIENTE / USUARIO
+        // ========================================
+
+        else {
+
+            // Verificar cliente asociado
+            if (!$usuario->cliente_id) {
+
+                abort(
+                    403,
+                    'Tu cuenta no está asociada a un cliente.'
+                );
+            }
+
+            // Solamente mostrar sus propios créditos
+            $creditos = Credito::with('cliente')
+                ->where(
+                    'cliente_id',
+                    $usuario->cliente_id
+                )
+                ->where('estado', 'Activo')
+                ->where('saldo', '>', 0)
+                ->orderBy('id', 'desc')
+                ->get();
+        }
+
+        return view(
+            'pagos.create',
+            compact('creditos')
+        );
     }
+
 
     public function store(StorePagoRequest $request)
     {
@@ -35,45 +121,98 @@ class PagoController extends Controller
 
         DB::transaction(function () use ($datos) {
 
-            // Buscar y bloquear el crédito mientras se registra el pago
-            $credito = Credito::where('id', $datos['credito_id'])
+            // ========================================
+            // BUSCAR Y BLOQUEAR EL CRÉDITO
+            // ========================================
+
+            $credito = Credito::where(
+                'id',
+                $datos['credito_id']
+            )
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            // Verificar que el crédito esté activo
+            $usuario = auth()->user();
+
+            // ========================================
+            // SEGURIDAD DEL CLIENTE
+            // ========================================
+
+            if ($usuario->rol !== 'Administrador') {
+
+                // El crédito debe pertenecer
+                // al cliente que inició sesión
+                if (
+                    $credito->cliente_id !==
+                    $usuario->cliente_id
+                ) {
+
+                    abort(
+                        403,
+                        'No tienes permiso para registrar un pago en este crédito.'
+                    );
+                }
+            }
+
+            // ========================================
+            // VERIFICAR ESTADO
+            // ========================================
+
             if ($credito->estado !== 'Activo') {
+
                 abort(
                     422,
                     'Este crédito no está activo y no permite pagos.'
                 );
             }
 
-            // Verificar que el pago no supere el saldo pendiente
-            if ((float) $datos['monto'] > (float) $credito->saldo) {
+            // ========================================
+            // VERIFICAR SALDO
+            // ========================================
+
+            if (
+                (float) $datos['monto'] >
+                (float) $credito->saldo
+            ) {
+
                 abort(
                     422,
                     'El pago no puede ser mayor al saldo pendiente.'
                 );
             }
 
-            // Registrar el pago
+            // ========================================
+            // REGISTRAR PAGO
+            // ========================================
+
             Pago::create($datos);
 
-            // Calcular el nuevo saldo
-            $nuevoSaldo = (float) $credito->saldo
-                - (float) $datos['monto'];
+            // ========================================
+            // CALCULAR NUEVO SALDO
+            // ========================================
 
-            // Evitar saldos negativos por decimales
+            $nuevoSaldo =
+                (float) $credito->saldo -
+                (float) $datos['monto'];
+
+            // Evitar saldo negativo
             if ($nuevoSaldo < 0) {
+
                 $nuevoSaldo = 0;
             }
 
-            // Determinar el nuevo estado
+            // ========================================
+            // DETERMINAR NUEVO ESTADO
+            // ========================================
+
             $nuevoEstado = $nuevoSaldo <= 0
                 ? 'Pagado'
                 : 'Activo';
 
-            // Actualizar el crédito
+            // ========================================
+            // ACTUALIZAR CRÉDITO
+            // ========================================
+
             $credito->update([
                 'saldo' => $nuevoSaldo,
                 'estado' => $nuevoEstado,
@@ -82,32 +221,92 @@ class PagoController extends Controller
 
         return redirect()
             ->route('pagos.index')
-            ->with('success', 'Pago registrado correctamente.');
+            ->with(
+                'success',
+                'Pago registrado correctamente.'
+            );
     }
+
 
     public function show(Pago $pago)
     {
+        $usuario = auth()->user();
+
         $pago->load('credito.cliente');
 
-        return view('pagos.show', compact('pago'));
+        // ========================================
+        // SEGURIDAD
+        // ========================================
+
+        if ($usuario->rol !== 'Administrador') {
+
+            // El pago debe pertenecer
+            // a un crédito del cliente conectado
+            if (
+                $pago->credito->cliente_id !==
+                $usuario->cliente_id
+            ) {
+
+                abort(
+                    403,
+                    'No tienes permiso para consultar este pago.'
+                );
+            }
+        }
+
+        return view(
+            'pagos.show',
+            compact('pago')
+        );
     }
+
 
     public function recibo(Pago $pago)
     {
+        $usuario = auth()->user();
+
         $pago->load('credito.cliente');
 
-        return view('pagos.recibo', compact('pago'));
+        // ========================================
+        // SEGURIDAD DEL RECIBO
+        // ========================================
+
+        if ($usuario->rol !== 'Administrador') {
+
+            if (
+                $pago->credito->cliente_id !==
+                $usuario->cliente_id
+            ) {
+
+                abort(
+                    403,
+                    'No tienes permiso para consultar este recibo.'
+                );
+            }
+        }
+
+        return view(
+            'pagos.recibo',
+            compact('pago')
+        );
     }
+
 
     public function edit(Pago $pago)
     {
         $pago->load('credito.cliente');
 
-        return view('pagos.edit', compact('pago'));
+        return view(
+            'pagos.edit',
+            compact('pago')
+        );
     }
 
-    public function update(\Illuminate\Http\Request $request, Pago $pago)
-    {
+
+    public function update(
+        \Illuminate\Http\Request $request,
+        Pago $pago
+    ) {
         return redirect()
             ->route('pagos.index')
             ->with(
@@ -115,6 +314,7 @@ class PagoController extends Controller
                 'La edición de pagos se realizará posteriormente.'
             );
     }
+
 
     public function destroy(Pago $pago)
     {

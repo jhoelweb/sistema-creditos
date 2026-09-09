@@ -75,6 +75,12 @@
             margin-left: 5px;
         }
 
+        .pagos {
+            background: #0d6efd;
+            color: white;
+            margin-left: 5px;
+        }
+
     </style>
 
 </head>
@@ -87,66 +93,84 @@
 
 
     <div class="dato">
+
         <strong>Cliente:</strong>
 
         {{ $credito->cliente->nombres }}
         {{ $credito->cliente->apellidos }}
+
     </div>
 
 
     <div class="dato">
+
         <strong>Documento:</strong>
 
         {{ $credito->cliente->documento_identidad }}
+
     </div>
 
 
     <div class="dato">
+
         <strong>Fecha de otorgamiento:</strong>
 
         {{ $credito->fecha_otorgamiento->format('d/m/Y') }}
+
     </div>
 
 
     <div class="dato">
+
         <strong>Monto:</strong>
 
         ${{ number_format($credito->monto, 2) }}
+
     </div>
 
 
     <div class="dato">
+
         <strong>Tasa de interés:</strong>
 
         {{ $credito->tasa_interes }}%
+
     </div>
 
 
     <div class="dato">
+
         <strong>Plazo:</strong>
 
         {{ $credito->plazo }} meses
+
     </div>
 
 
     <div class="dato">
+
         <strong>Total del crédito:</strong>
 
         ${{ number_format($credito->total_credito, 2) }}
+
     </div>
 
 
     <div class="dato">
+
         <strong>Saldo pendiente:</strong>
 
         ${{ number_format($credito->saldo, 2) }}
+
     </div>
 
 
     <div class="dato">
+
         <strong>Fecha de vencimiento:</strong>
 
         {{ $credito->fecha_vencimiento->format('d/m/Y') }}
+
     </div>
 
 
@@ -183,7 +207,21 @@
     </div>
 
 
-    {{-- Todos pueden volver --}}
+    {{-- ========================================
+         BOTÓN PARA VER PAGOS
+    ======================================== --}}
+
+    <a
+        href="{{ route('pagos.index') }}"
+        class="boton pagos"
+    >
+        Ver pagos
+    </a>
+
+
+    {{-- ========================================
+         VOLVER
+    ======================================== --}}
 
     <a
         href="{{ route('creditos.index') }}"
@@ -193,7 +231,9 @@
     </a>
 
 
-    {{-- Solo Administrador puede editar --}}
+    {{-- ========================================
+         SOLO ADMINISTRADOR PUEDE EDITAR
+    ======================================== --}}
 
     @if(Auth::user()->rol === 'Administrador')
 

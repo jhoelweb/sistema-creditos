@@ -29,6 +29,31 @@
             margin-bottom: 25px;
         }
 
+        /* ==============================
+           NAVEGACIÓN
+        ============================== */
+
+        .navegacion {
+            margin-bottom: 25px;
+        }
+
+        .btn-dashboard {
+            display: inline-block;
+            padding: 10px 15px;
+            background: #212529;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .btn-dashboard:hover {
+            background: #343a40;
+        }
+
+        /* ==============================
+           BARRA
+        ============================== */
+
         .barra {
             display: flex;
             gap: 10px;
@@ -104,6 +129,22 @@
             border-radius: 5px;
         }
 
+        @media (max-width: 768px) {
+
+            body {
+                margin: 20px;
+            }
+
+            .barra {
+                flex-wrap: wrap;
+            }
+
+            input {
+                width: 100%;
+            }
+
+        }
+
     </style>
 
 </head>
@@ -113,6 +154,22 @@
 <div class="contenedor">
 
     <h1>Gestión de Clientes</h1>
+
+
+    {{-- ==============================
+         BOTÓN DASHBOARD
+    ============================== --}}
+
+    <div class="navegacion">
+
+        <a
+            href="{{ route('dashboard') }}"
+            class="btn-dashboard"
+        >
+             Dashboard
+        </a>
+
+    </div>
 
 
     {{-- Mensaje de éxito --}}
@@ -201,30 +258,22 @@
                         {{ $cliente->id }}
                     </td>
 
-
                     <td>
-
                         {{ $cliente->nombres }}
-
                         {{ $cliente->apellidos }}
-
                     </td>
-
 
                     <td>
                         {{ $cliente->documento_identidad }}
                     </td>
 
-
                     <td>
                         {{ $cliente->telefono }}
                     </td>
 
-
                     <td>
                         {{ $cliente->correo }}
                     </td>
-
 
                     <td>
 

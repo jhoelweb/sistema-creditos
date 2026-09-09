@@ -14,6 +14,8 @@ class UpdateClienteRequest extends FormRequest
 
     public function rules(): array
     {
+        $cliente = $this->route('cliente');
+
         return [
             'nombres' => [
                 'required',
@@ -32,7 +34,7 @@ class UpdateClienteRequest extends FormRequest
                 'string',
                 'max:30',
                 Rule::unique('clientes', 'documento_identidad')
-                    ->ignore($this->route('cliente')),
+                    ->ignore($cliente),
             ],
 
             'telefono' => [
@@ -42,9 +44,13 @@ class UpdateClienteRequest extends FormRequest
             ],
 
             'correo' => [
-                'nullable',
+                'required',
                 'email',
                 'max:150',
+                Rule::unique('users', 'email')
+                    ->ignore(
+                        optional($cliente->usuario)->id
+                    ),
             ],
 
             'direccion' => [
@@ -63,12 +69,29 @@ class UpdateClienteRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'nombres.required' => 'El nombre es obligatorio.',
-            'apellidos.required' => 'Los apellidos son obligatorios.',
-            'documento_identidad.required' => 'El documento de identidad es obligatorio.',
-            'documento_identidad.unique' => 'Este documento ya está registrado.',
-            'telefono.required' => 'El teléfono es obligatorio.',
-            'correo.email' => 'El correo electrónico no es válido.',
+            'nombres.required' =>
+                'El nombre es obligatorio.',
+
+            'apellidos.required' =>
+                'Los apellidos son obligatorios.',
+
+            'documento_identidad.required' =>
+                'El documento de identidad es obligatorio.',
+
+            'documento_identidad.unique' =>
+                'Este documento ya está registrado.',
+
+            'telefono.required' =>
+                'El teléfono es obligatorio.',
+
+            'correo.required' =>
+                'El correo electrónico es obligatorio.',
+
+            'correo.email' =>
+                'El correo electrónico no es válido.',
+
+            'correo.unique' =>
+                'Este correo ya está utilizado por otro usuario.',
         ];
     }
 }

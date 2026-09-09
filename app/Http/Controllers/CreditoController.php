@@ -12,24 +12,74 @@ class CreditoController extends Controller
 {
     public function index(Request $request)
     {
+        // Actualizar automáticamente créditos vencidos
         Credito::where('estado', 'Activo')
             ->where('saldo', '>', 0)
-            ->whereDate('fecha_vencimiento', '<', now()->toDateString())
+            ->whereDate(
+                'fecha_vencimiento',
+                '<',
+                now()->toDateString()
+            )
             ->update([
                 'estado' => 'Vencido'
             ]);
 
-        $estado = $request->input('estado');
+        $usuario = auth()->user();
 
-        $creditos = Credito::with('cliente')
-            ->when($estado, function ($query, $estado) {
-                $query->where('estado', $estado);
-            })
-            ->orderBy('id', 'desc')
-            ->get();
+        // ========================================
+        // ADMINISTRADOR
+        // ========================================
 
-        return view('creditos.index', compact('creditos', 'estado'));
+        if ($usuario->rol === 'Administrador') {
+
+            $estado = $request->input('estado');
+
+            $creditos = Credito::with('cliente')
+                ->when($estado, function ($query, $estado) {
+                    $query->where('estado', $estado);
+                })
+                ->orderBy('id', 'desc')
+                ->get();
+
+        }
+
+        // ========================================
+        // CLIENTE / USUARIO
+        // ========================================
+
+        else {
+
+            // Verificar que tenga cliente asociado
+            if (!$usuario->cliente_id) {
+
+                abort(
+                    403,
+                    'Tu cuenta no está asociada a un cliente.'
+                );
+            }
+
+            $estado = $request->input('estado');
+
+            // Mostrar solamente los créditos
+            // pertenecientes al cliente conectado
+            $creditos = Credito::with('cliente')
+                ->where(
+                    'cliente_id',
+                    $usuario->cliente_id
+                )
+                ->when($estado, function ($query, $estado) {
+                    $query->where('estado', $estado);
+                })
+                ->orderBy('id', 'desc')
+                ->get();
+        }
+
+        return view(
+            'creditos.index',
+            compact('creditos', 'estado')
+        );
     }
+
 
     public function create()
     {
@@ -37,14 +87,19 @@ class CreditoController extends Controller
             ->orderBy('nombres')
             ->get();
 
-        return view('creditos.create', compact('clientes'));
+        return view(
+            'creditos.create',
+            compact('clientes')
+        );
     }
+
 
     public function store(StoreCreditoRequest $request)
     {
         $datos = $request->validated();
 
         $monto = (float) $datos['monto'];
+
         $tasa = (float) $datos['tasa_interes'];
 
         // Calcular interés
@@ -55,6 +110,7 @@ class CreditoController extends Controller
 
         // Valores iniciales del crédito
         $datos['total_credito'] = $total;
+
         $datos['saldo'] = $total;
 
         // Calcular fecha de vencimiento
@@ -73,15 +129,42 @@ class CreditoController extends Controller
 
         return redirect()
             ->route('creditos.index')
-            ->with('success', 'Crédito registrado correctamente.');
+            ->with(
+                'success',
+                'Crédito registrado correctamente.'
+            );
     }
+
 
     public function show(Credito $credito)
     {
-        $credito->load('cliente');
+        $usuario = auth()->user();
 
-        return view('creditos.show', compact('credito'));
+        // ========================================
+        // SEGURIDAD
+        // ========================================
+
+        // Si es Usuario, solamente puede
+        // consultar sus propios créditos
+        if (
+            $usuario->rol !== 'Administrador' &&
+            $usuario->cliente_id !== $credito->cliente_id
+        ) {
+
+            abort(
+                403,
+                'No tienes permiso para consultar este crédito.'
+            );
+        }
+
+        $credito->load('cliente', 'pagos');
+
+        return view(
+            'creditos.show',
+            compact('credito')
+        );
     }
+
 
     public function edit(Credito $credito)
     {
@@ -89,8 +172,12 @@ class CreditoController extends Controller
             ->orderBy('nombres')
             ->get();
 
-        return view('creditos.edit', compact('credito', 'clientes'));
+        return view(
+            'creditos.edit',
+            compact('credito', 'clientes')
+        );
     }
+
 
     public function update(
         UpdateCreditoRequest $request,
@@ -99,6 +186,7 @@ class CreditoController extends Controller
         $datos = $request->validated();
 
         $monto = (float) $datos['monto'];
+
         $tasa = (float) $datos['tasa_interes'];
 
         // Recalcular interés
@@ -109,13 +197,18 @@ class CreditoController extends Controller
 
         $datos['total_credito'] = $total;
 
-        /*
-        Mantener temporalmente el saldo actual.
-        Más adelante ajustaremos esta lógica para que,
-        si el crédito ya tiene pagos, el saldo se calcule
-        correctamente.
-        */
-        $datos['saldo'] = $credito->saldo;
+        // Obtener la suma de todos los pagos realizados
+        $totalPagado = (float) $credito->pagos()->sum('monto');
+
+        // Calcular nuevamente el saldo pendiente
+        $nuevoSaldo = $total - $totalPagado;
+
+        // Evitar saldo negativo
+        if ($nuevoSaldo < 0) {
+            $nuevoSaldo = 0;
+        }
+
+        $datos['saldo'] = $nuevoSaldo;
 
         // Recalcular fecha de vencimiento
         $datos['fecha_vencimiento'] = date(
@@ -126,16 +219,24 @@ class CreditoController extends Controller
             )
         );
 
-        // Mantener un crédito cancelado como cancelado
+        // Determinar correctamente el estado
         if ($credito->estado === 'Cancelado') {
+
             $datos['estado'] = 'Cancelado';
-        } elseif ($credito->saldo <= 0) {
+
+        } elseif ($nuevoSaldo <= 0) {
+
             $datos['estado'] = 'Pagado';
+
         } elseif (
-            strtotime($datos['fecha_vencimiento']) < strtotime(date('Y-m-d'))
+            strtotime($datos['fecha_vencimiento'])
+            < strtotime(date('Y-m-d'))
         ) {
+
             $datos['estado'] = 'Vencido';
+
         } else {
+
             $datos['estado'] = 'Activo';
         }
 
@@ -143,8 +244,12 @@ class CreditoController extends Controller
 
         return redirect()
             ->route('creditos.index')
-            ->with('success', 'Crédito actualizado correctamente.');
+            ->with(
+                'success',
+                'Crédito actualizado correctamente.'
+            );
     }
+
 
     public function destroy(Credito $credito)
     {
@@ -154,6 +259,9 @@ class CreditoController extends Controller
 
         return redirect()
             ->route('creditos.index')
-            ->with('success', 'Crédito cancelado correctamente.');
+            ->with(
+                'success',
+                'Crédito cancelado correctamente.'
+            );
     }
 }

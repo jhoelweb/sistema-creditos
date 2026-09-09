@@ -503,7 +503,7 @@
             <div class="modulo">
 
                 <div class="icono">
-                    👥
+                    
                 </div>
 
                 <h3>
@@ -527,7 +527,7 @@
             <div class="modulo">
 
                 <div class="icono">
-                    💰
+                    
                 </div>
 
                 <h3>
@@ -551,7 +551,7 @@
             <div class="modulo">
 
                 <div class="icono">
-                    💵
+                    
                 </div>
 
                 <h3>
@@ -584,7 +584,7 @@
             <div class="modulo">
 
                 <div class="icono">
-                    👥
+                    
                 </div>
 
                 <h3>
@@ -608,7 +608,7 @@
             <div class="modulo">
 
                 <div class="icono">
-                    💰
+                    
                 </div>
 
                 <h3>
@@ -632,7 +632,7 @@
             <div class="modulo">
 
                 <div class="icono">
-                    💵
+                    
                 </div>
 
                 <h3>

@@ -6,37 +6,38 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    /**
-     * Los atributos que se pueden asignar masivamente.
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
         'rol',
+        'cliente_id',
     ];
 
-    /**
-     * Los atributos ocultos al serializar.
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Los atributos que deben convertirse a tipos específicos.
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Usuario perteneciente a un cliente.
+     */
+    public function cliente(): BelongsTo
+    {
+        return $this->belongsTo(Cliente::class);
     }
 }

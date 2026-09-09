@@ -29,6 +29,31 @@
             margin-bottom: 25px;
         }
 
+        /* ==============================
+           NAVEGACIÓN
+        ============================== */
+
+        .navegacion {
+            margin-bottom: 25px;
+        }
+
+        .btn-dashboard {
+            display: inline-block;
+            padding: 10px 15px;
+            background: #212529;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .btn-dashboard:hover {
+            background: #343a40;
+        }
+
+        /* ==============================
+           BARRA
+        ============================== */
+
         .barra {
             display: flex;
             align-items: center;
@@ -122,6 +147,26 @@
             padding: 20px;
         }
 
+        /* ==============================
+           RESPONSIVE
+        ============================== */
+
+        @media (max-width: 768px) {
+
+            body {
+                margin: 20px;
+            }
+
+            .barra {
+                flex-wrap: wrap;
+            }
+
+            .filtro {
+                width: 100%;
+            }
+
+        }
+
     </style>
 
 </head>
@@ -133,10 +178,28 @@
     <h1>Gestión de Créditos</h1>
 
 
+    {{-- ==============================
+         BOTÓN DASHBOARD
+    ============================== --}}
+
+    <div class="navegacion">
+
+        <a
+            href="{{ route('dashboard') }}"
+            class="btn-dashboard"
+        >
+             Dashboard
+        </a>
+
+    </div>
+
+
     @if(session('success'))
 
         <div class="mensaje">
+
             {{ session('success') }}
+
         </div>
 
     @endif
@@ -240,42 +303,34 @@
                         {{ $credito->id }}
                     </td>
 
-
                     <td>
                         {{ $credito->cliente->nombres }}
                         {{ $credito->cliente->apellidos }}
                     </td>
 
-
                     <td>
                         {{ $credito->fecha_otorgamiento->format('d/m/Y') }}
                     </td>
-
 
                     <td>
                         ${{ number_format($credito->monto, 2) }}
                     </td>
 
-
                     <td>
                         {{ $credito->tasa_interes }}%
                     </td>
-
 
                     <td>
                         ${{ number_format($credito->total_credito, 2) }}
                     </td>
 
-
                     <td>
                         ${{ number_format($credito->saldo, 2) }}
                     </td>
 
-
                     <td>
                         {{ $credito->fecha_vencimiento->format('d/m/Y') }}
                     </td>
-
 
                     <td>
 

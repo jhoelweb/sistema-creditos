@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Cliente extends Model
 {
@@ -21,6 +22,17 @@ class Cliente extends Model
         'estado' => 'boolean',
     ];
 
+    /**
+     * Usuario asociado al cliente.
+     */
+    public function usuario(): HasOne
+    {
+        return $this->hasOne(User::class);
+    }
+
+    /**
+     * Créditos pertenecientes al cliente.
+     */
     public function creditos(): HasMany
     {
         return $this->hasMany(Credito::class);

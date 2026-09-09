@@ -69,16 +69,46 @@
             color: white;
         }
 
+        .guardar:hover {
+            background: #157347;
+        }
+
         .cancelar {
             background: #6c757d;
             color: white;
             margin-left: 5px;
         }
 
+        .cancelar:hover {
+            background: #5c636a;
+        }
+
         .desactivar {
             background: #dc3545;
             color: white;
             margin-left: 5px;
+        }
+
+        .desactivar:hover {
+            background: #bb2d3b;
+        }
+
+        .errores {
+            background: #f8d7da;
+            color: #842029;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .errores ul {
+            margin: 8px 0 0 20px;
+        }
+
+        .ayuda {
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
         }
 
     </style>
@@ -91,10 +121,36 @@
 
     <h1>Editar Cliente</h1>
 
-    <form action="{{ route('clientes.update', $cliente) }}" method="POST">
+    @if($errors->any())
+
+        <div class="errores">
+
+            <strong>Corrige los siguientes errores:</strong>
+
+            <ul>
+
+                @foreach($errors->all() as $error)
+
+                    <li>{{ $error }}</li>
+
+                @endforeach
+
+            </ul>
+
+        </div>
+
+    @endif
+
+    <form
+        action="{{ route('clientes.update', $cliente) }}"
+        method="POST"
+    >
 
         @csrf
+
         @method('PUT')
+
+        <!-- NOMBRES -->
 
         <div class="campo">
 
@@ -103,11 +159,13 @@
             <input
                 type="text"
                 name="nombres"
-                value="{{ $cliente->nombres }}"
+                value="{{ old('nombres', $cliente->nombres) }}"
                 required
             >
 
         </div>
+
+        <!-- APELLIDOS -->
 
         <div class="campo">
 
@@ -116,11 +174,13 @@
             <input
                 type="text"
                 name="apellidos"
-                value="{{ $cliente->apellidos }}"
+                value="{{ old('apellidos', $cliente->apellidos) }}"
                 required
             >
 
         </div>
+
+        <!-- DOCUMENTO -->
 
         <div class="campo">
 
@@ -129,11 +189,13 @@
             <input
                 type="text"
                 name="documento_identidad"
-                value="{{ $cliente->documento_identidad }}"
+                value="{{ old('documento_identidad', $cliente->documento_identidad) }}"
                 required
             >
 
         </div>
+
+        <!-- TELÉFONO -->
 
         <div class="campo">
 
@@ -142,33 +204,47 @@
             <input
                 type="text"
                 name="telefono"
-                value="{{ $cliente->telefono }}"
+                value="{{ old('telefono', $cliente->telefono) }}"
                 required
             >
 
         </div>
 
+        <!-- CORREO -->
+
         <div class="campo">
 
-            <label>Correo</label>
+            <label>Correo electrónico</label>
 
             <input
                 type="email"
                 name="correo"
-                value="{{ $cliente->correo }}"
+                value="{{ old('correo', $cliente->correo) }}"
+                required
             >
 
+            <div class="ayuda">
+                Este correo también será utilizado para iniciar sesión.
+            </div>
+
         </div>
+
+        <!-- DIRECCIÓN -->
 
         <div class="campo">
 
             <label>Dirección</label>
 
-            <textarea name="direccion">{{ $cliente->direccion }}</textarea>
+            <textarea name="direccion">{{ old('direccion', $cliente->direccion) }}</textarea>
 
         </div>
 
-        <button type="submit" class="boton guardar">
+        <!-- BOTONES -->
+
+        <button
+            type="submit"
+            class="boton guardar"
+        >
             Actualizar cliente
         </button>
 
@@ -181,15 +257,18 @@
 
     </form>
 
+    <!-- DESACTIVAR CLIENTE -->
+
     @if($cliente->estado)
 
         <form
             action="{{ route('clientes.destroy', $cliente) }}"
             method="POST"
-            style="display:inline;"
+            style="display: inline;"
         >
 
             @csrf
+
             @method('DELETE')
 
             <button

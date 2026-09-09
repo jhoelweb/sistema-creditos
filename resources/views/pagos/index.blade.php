@@ -29,6 +29,31 @@
             margin-bottom: 25px;
         }
 
+        /* =========================
+           NAVEGACIÓN
+        ========================= */
+
+        .navegacion {
+            margin-bottom: 20px;
+        }
+
+        .btn-dashboard {
+            display: inline-block;
+            padding: 10px 15px;
+            background: #212529;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .btn-dashboard:hover {
+            background: #343a40;
+        }
+
+        /* =========================
+           BARRA DE BOTONES
+        ========================= */
+
         .barra {
             margin-bottom: 20px;
         }
@@ -52,6 +77,10 @@
             color: white;
         }
 
+        /* =========================
+           TABLA
+        ========================= */
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -69,6 +98,10 @@
             color: white;
         }
 
+        /* =========================
+           MENSAJE
+        ========================= */
+
         .mensaje {
             padding: 12px;
             background: #d1e7dd;
@@ -76,6 +109,10 @@
             margin-bottom: 20px;
             border-radius: 5px;
         }
+
+        /* =========================
+           SIN RESULTADOS
+        ========================= */
 
         .sin-resultados {
             text-align: center;
@@ -92,14 +129,38 @@
 
     <h1>Gestión de Pagos</h1>
 
+    <!-- =========================
+         BOTÓN DASHBOARD
+    ========================= -->
+
+    <div class="navegacion">
+
+        <a
+            href="{{ route('dashboard') }}"
+            class="btn-dashboard"
+        >
+             Dashboard
+        </a>
+
+    </div>
+
+    <!-- =========================
+         MENSAJE DE ÉXITO
+    ========================= -->
+
     @if(session('success'))
 
         <div class="mensaje">
+
             {{ session('success') }}
+
         </div>
 
     @endif
 
+    <!-- =========================
+         NUEVO PAGO
+    ========================= -->
 
     <div class="barra">
 
@@ -112,6 +173,9 @@
 
     </div>
 
+    <!-- =========================
+         TABLA DE PAGOS
+    ========================= -->
 
     <table>
 
@@ -137,7 +201,6 @@
 
         </thead>
 
-
         <tbody>
 
             @forelse($pagos as $pago)
@@ -148,42 +211,26 @@
                         {{ $pago->id }}
                     </td>
 
-
                     <td>
-
                         {{ $pago->credito->cliente->nombres }}
                         {{ $pago->credito->cliente->apellidos }}
-
                     </td>
 
-
                     <td>
-
                         #{{ $pago->credito_id }}
-
                     </td>
 
-
                     <td>
-
                         {{ $pago->fecha_pago->format('d/m/Y') }}
-
                     </td>
 
-
                     <td>
-
                         ${{ number_format($pago->monto, 2) }}
-
                     </td>
-
 
                     <td>
-
                         {{ $pago->referencia ?? 'Sin referencia' }}
-
                     </td>
-
 
                     <td>
 
@@ -207,7 +254,6 @@
                         class="sin-resultados"
                     >
                         No hay pagos registrados.
-
                     </td>
 
                 </tr>
