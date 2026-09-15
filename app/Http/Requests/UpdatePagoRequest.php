@@ -115,7 +115,6 @@ class PagoController extends Controller
             }
 
             if ($credito->estado !== 'Activo') {
-
                 abort(
                     422,
                     'Este crédito no está activo y no permite pagos.'
@@ -215,16 +214,6 @@ class PagoController extends Controller
 
     public function edit(Pago $pago)
     {
-        $usuario = auth()->user();
-
-        if ($usuario->rol !== 'Administrador') {
-
-            abort(
-                403,
-                'No tienes permiso para editar pagos.'
-            );
-        }
-
         $pago->load('credito.cliente');
 
         return view(
@@ -242,9 +231,6 @@ class PagoController extends Controller
 
         DB::transaction(function () use ($datos, $pago) {
 
-            /*
-             * Bloquear el pago mientras se modifica.
-             */
             $pagoActual = Pago::where(
                 'id',
                 $pago->id
@@ -252,10 +238,6 @@ class PagoController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
-
-            /*
-             * Bloquear también el crédito.
-             */
             $credito = Credito::where(
                 'id',
                 $pagoActual->credito_id
@@ -263,66 +245,58 @@ class PagoController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            $montoAnterior = (float) $pagoActual->monto;
+            $montoNuevo = (float) $datos['monto'];
 
             /*
-             * Calculamos cuánto saldo había
-             * antes de aplicar el pago actual.
+             * El saldo actual ya tiene descontado
+             * el pago anterior.
              *
-             * Ejemplo:
-             *
-             * Total: $1,100
-             * Pago actual: $300
-             * Saldo actual: $800
-             *
-             * Saldo disponible para editar:
-             *
-             * $800 + $300 = $1,100
+             * Por eso primero devolvemos el monto
+             * anterior al saldo y luego aplicamos
+             * el nuevo monto.
              */
+
             $saldoDisponible =
                 (float) $credito->saldo +
-                (float) $pagoActual->monto;
+                $montoAnterior;
 
-
-            /*
-             * Verificar que el nuevo pago
-             * no supere el total disponible.
-             */
-            if (
-                (float) $datos['monto'] >
-                $saldoDisponible
-            ) {
+            if ($montoNuevo > $saldoDisponible) {
                 abort(
                     422,
-                    'El nuevo monto no puede superar el saldo disponible del crédito.'
+                    'El nuevo monto del pago no puede ser mayor al saldo disponible.'
                 );
             }
 
-
-            /*
-             * Calcular nuevo saldo.
-             */
             $nuevoSaldo =
                 $saldoDisponible -
-                (float) $datos['monto'];
-
+                $montoNuevo;
 
             if ($nuevoSaldo < 0) {
                 $nuevoSaldo = 0;
             }
 
+            /*
+             * Actualizar el pago.
+             */
+
+            $pagoActual->update([
+                'fecha_pago' => $datos['fecha_pago'],
+                'monto' => $montoNuevo,
+                'referencia' => $datos['referencia'] ?? null,
+                'observaciones' => $datos['observaciones'] ?? null,
+            ]);
 
             /*
-             * Determinar estado del crédito.
+             * Determinar el nuevo estado del crédito.
              */
-            if ($credito->estado === 'Cancelado') {
 
-                $nuevoEstado = 'Cancelado';
-
-            } elseif ($nuevoSaldo <= 0) {
+            if ($nuevoSaldo <= 0) {
 
                 $nuevoEstado = 'Pagado';
 
             } elseif (
+                $credito->fecha_vencimiento &&
                 $credito->fecha_vencimiento->isPast()
             ) {
 
@@ -333,34 +307,11 @@ class PagoController extends Controller
                 $nuevoEstado = 'Activo';
             }
 
-
-            /*
-             * Actualizar pago.
-             */
-            $pagoActual->update([
-                'fecha_pago' =>
-                    $datos['fecha_pago'],
-
-                'monto' =>
-                    $datos['monto'],
-
-                'referencia' =>
-                    $datos['referencia'] ?? null,
-
-                'observaciones' =>
-                    $datos['observaciones'] ?? null,
-            ]);
-
-
-            /*
-             * Actualizar saldo y estado.
-             */
             $credito->update([
                 'saldo' => $nuevoSaldo,
                 'estado' => $nuevoEstado,
             ]);
         });
-
 
         return redirect()
             ->route('pagos.index')
@@ -375,9 +326,6 @@ class PagoController extends Controller
     {
         DB::transaction(function () use ($pago) {
 
-            /*
-             * Bloquear el pago.
-             */
             $pagoActual = Pago::where(
                 'id',
                 $pago->id
@@ -385,10 +333,6 @@ class PagoController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
-
-            /*
-             * Bloquear el crédito.
-             */
             $credito = Credito::where(
                 'id',
                 $pagoActual->credito_id
@@ -396,20 +340,15 @@ class PagoController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
-
             /*
-             * Al eliminar el pago,
-             * devolvemos ese dinero al saldo.
+             * Restaurar el monto del pago
+             * al saldo del crédito.
              */
+
             $nuevoSaldo =
                 (float) $credito->saldo +
                 (float) $pagoActual->monto;
 
-
-            /*
-             * El saldo nunca puede superar
-             * el total del crédito.
-             */
             if (
                 $nuevoSaldo >
                 (float) $credito->total_credito
@@ -418,19 +357,16 @@ class PagoController extends Controller
                     (float) $credito->total_credito;
             }
 
-
             /*
-             * Determinar nuevo estado.
+             * Determinar nuevamente el estado.
              */
-            if ($credito->estado === 'Cancelado') {
 
-                $nuevoEstado = 'Cancelado';
-
-            } elseif ($nuevoSaldo <= 0) {
+            if ($nuevoSaldo <= 0) {
 
                 $nuevoEstado = 'Pagado';
 
             } elseif (
+                $credito->fecha_vencimiento &&
                 $credito->fecha_vencimiento->isPast()
             ) {
 
@@ -441,28 +377,19 @@ class PagoController extends Controller
                 $nuevoEstado = 'Activo';
             }
 
-
-            /*
-             * Eliminar el pago.
-             */
-            $pagoActual->delete();
-
-
-            /*
-             * Restaurar el saldo del crédito.
-             */
             $credito->update([
                 'saldo' => $nuevoSaldo,
                 'estado' => $nuevoEstado,
             ]);
-        });
 
+            $pagoActual->delete();
+        });
 
         return redirect()
             ->route('pagos.index')
             ->with(
                 'success',
-                'Pago eliminado correctamente y saldo restaurado.'
+                'Pago eliminado correctamente y el saldo del crédito fue actualizado.'
             );
     }
 }

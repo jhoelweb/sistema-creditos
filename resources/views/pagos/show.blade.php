@@ -68,6 +68,27 @@
             background: #157347;
         }
 
+        .editar {
+        background: #ffc107;
+        color: black;
+        margin-left: 5px;
+        }
+
+        .editar:hover {
+        background: #e0a800;
+        }
+
+        .eliminar {
+        background: #dc3545;
+        color: white;
+        border: none;
+        margin-left: 5px;
+        }
+
+        .eliminar:hover {
+        background: #bb2d3b;
+        }
+
     </style>
 
 </head>
@@ -162,30 +183,46 @@
     <!-- ========================================
          BOTONES
     ======================================== -->
-
-    <a
-        href="{{ route('pagos.index') }}"
-        class="boton volver"
-    >
-        Volver
+    <a href="{{ route('pagos.index') }}" class="boton volver">
+    Volver
     </a>
 
-
-    <a
-        href="{{ route('creditos.show', $pago->credito) }}"
-        class="boton credito"
-    >
-        Ver crédito
+    <a href="{{ route('creditos.show', $pago->credito) }}" class="boton credito">
+    Ver crédito
     </a>
 
+    @if(Auth::user()->rol === 'Administrador')
 
-    <a
-        href="{{ route('pagos.recibo', $pago) }}"
-        class="boton recibo"
-    >
-         Imprimir recibo
+    <a href="{{ route('pagos.edit', $pago) }}" class="boton editar">
+        Editar
     </a>
 
+    <form
+        action="{{ route('pagos.destroy', $pago) }}"
+        method="POST"
+        style="display: inline;"
+        onsubmit="return confirm('¿Está seguro de eliminar este pago? Esta acción restaurará el saldo del crédito.');"
+    >
+
+        @csrf
+
+        @method('DELETE')
+
+        <button
+            type="submit"
+            class="boton eliminar"
+        >
+            Eliminar
+        </button>
+
+    </form>
+
+    @endif
+
+    <a href="{{ route('pagos.recibo', $pago) }}" class="boton recibo">
+    Imprimir recibo
+    </a>
+    
 
 </div>
 
