@@ -40,7 +40,6 @@ class CreditoController extends Controller
                 })
                 ->orderBy('id', 'desc')
                 ->get();
-
         }
 
         // ========================================
@@ -51,7 +50,6 @@ class CreditoController extends Controller
 
             // Verificar que tenga cliente asociado
             if (!$usuario->cliente_id) {
-
                 abort(
                     403,
                     'Tu cuenta no está asociada a un cliente.'
@@ -80,7 +78,6 @@ class CreditoController extends Controller
         );
     }
 
-
     public function create()
     {
         $clientes = Cliente::where('estado', true)
@@ -93,14 +90,13 @@ class CreditoController extends Controller
         );
     }
 
-
     public function store(StoreCreditoRequest $request)
     {
         $datos = $request->validated();
 
         $monto = (float) $datos['monto'];
-
         $tasa = (float) $datos['tasa_interes'];
+        $plazo = (int) $datos['plazo'];
 
         // Calcular interés
         $interes = $monto * ($tasa / 100);
@@ -109,15 +105,23 @@ class CreditoController extends Controller
         $total = $monto + $interes;
 
         // Valores iniciales del crédito
-        $datos['total_credito'] = $total;
+        $datos['total_credito'] = round($total, 2);
+        $datos['saldo'] = round($total, 2);
 
-        $datos['saldo'] = $total;
+        // ========================================
+        // CALCULAR CUOTA MENSUAL
+        // ========================================
+
+        $datos['cuota_mensual'] = round(
+            $total / $plazo,
+            2
+        );
 
         // Calcular fecha de vencimiento
         $datos['fecha_vencimiento'] = date(
             'Y-m-d',
             strtotime(
-                '+' . (int) $datos['plazo'] . ' months',
+                '+' . $plazo . ' months',
                 strtotime($datos['fecha_otorgamiento'])
             )
         );
@@ -135,7 +139,6 @@ class CreditoController extends Controller
             );
     }
 
-
     public function show(Credito $credito)
     {
         $usuario = auth()->user();
@@ -150,7 +153,6 @@ class CreditoController extends Controller
             $usuario->rol !== 'Administrador' &&
             $usuario->cliente_id !== $credito->cliente_id
         ) {
-
             abort(
                 403,
                 'No tienes permiso para consultar este crédito.'
@@ -165,7 +167,6 @@ class CreditoController extends Controller
         );
     }
 
-
     public function edit(Credito $credito)
     {
         $clientes = Cliente::where('estado', true)
@@ -178,7 +179,6 @@ class CreditoController extends Controller
         );
     }
 
-
     public function update(
         UpdateCreditoRequest $request,
         Credito $credito
@@ -186,8 +186,8 @@ class CreditoController extends Controller
         $datos = $request->validated();
 
         $monto = (float) $datos['monto'];
-
         $tasa = (float) $datos['tasa_interes'];
+        $plazo = (int) $datos['plazo'];
 
         // Recalcular interés
         $interes = $monto * ($tasa / 100);
@@ -195,7 +195,16 @@ class CreditoController extends Controller
         // Recalcular total
         $total = $monto + $interes;
 
-        $datos['total_credito'] = $total;
+        $datos['total_credito'] = round($total, 2);
+
+        // ========================================
+        // RECALCULAR CUOTA MENSUAL
+        // ========================================
+
+        $datos['cuota_mensual'] = round(
+            $total / $plazo,
+            2
+        );
 
         // Obtener la suma de todos los pagos realizados
         $totalPagado = (float) $credito->pagos()->sum('monto');
@@ -208,13 +217,13 @@ class CreditoController extends Controller
             $nuevoSaldo = 0;
         }
 
-        $datos['saldo'] = $nuevoSaldo;
+        $datos['saldo'] = round($nuevoSaldo, 2);
 
         // Recalcular fecha de vencimiento
         $datos['fecha_vencimiento'] = date(
             'Y-m-d',
             strtotime(
-                '+' . (int) $datos['plazo'] . ' months',
+                '+' . $plazo . ' months',
                 strtotime($datos['fecha_otorgamiento'])
             )
         );
@@ -249,7 +258,6 @@ class CreditoController extends Controller
                 'Crédito actualizado correctamente.'
             );
     }
-
 
     public function destroy(Credito $credito)
     {

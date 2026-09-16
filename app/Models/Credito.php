@@ -16,6 +16,7 @@ class Credito extends Model
         'plazo',
         'total_credito',
         'saldo',
+        'cuota_mensual',
         'fecha_vencimiento',
         'estado',
     ];
@@ -27,6 +28,7 @@ class Credito extends Model
         'tasa_interes' => 'decimal:2',
         'total_credito' => 'decimal:2',
         'saldo' => 'decimal:2',
+        'cuota_mensual' => 'decimal:2',
     ];
 
     public function cliente()
