@@ -7,6 +7,7 @@ use App\Http\Requests\UpdatePagoRequest;
 use App\Models\Credito;
 use App\Models\Pago;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PagoController extends Controller
 {
@@ -101,6 +102,7 @@ class PagoController extends Controller
 
             $usuario = auth()->user();
 
+            // Verificar permisos
             if ($usuario->rol !== 'Administrador') {
 
                 if (
@@ -114,38 +116,50 @@ class PagoController extends Controller
                 }
             }
 
+            // Verificar que el crédito esté activo
             if ($credito->estado !== 'Activo') {
 
-                abort(
-                    422,
-                    'Este crédito no está activo y no permite pagos.'
-                );
+                throw ValidationException::withMessages([
+                    'credito_id' =>
+                        'Este crédito no está activo y no permite pagos.'
+                ]);
             }
 
+            // Verificar que el pago no supere el saldo
             if (
                 (float) $datos['monto'] >
                 (float) $credito->saldo
             ) {
-                abort(
-                    422,
-                    'El pago no puede ser mayor al saldo pendiente.'
-                );
+
+                throw ValidationException::withMessages([
+                    'monto' =>
+                        'El pago no puede ser mayor al saldo pendiente de $' .
+                        number_format(
+                            (float) $credito->saldo,
+                            2
+                        ) . '.'
+                ]);
             }
 
+            // Registrar pago
             Pago::create($datos);
 
+            // Calcular nuevo saldo
             $nuevoSaldo =
                 (float) $credito->saldo -
                 (float) $datos['monto'];
 
+            // Evitar saldo negativo
             if ($nuevoSaldo < 0) {
                 $nuevoSaldo = 0;
             }
 
+            // Determinar estado
             $nuevoEstado = $nuevoSaldo <= 0
                 ? 'Pagado'
                 : 'Activo';
 
+            // Actualizar crédito
             $credito->update([
                 'saldo' => $nuevoSaldo,
                 'estado' => $nuevoEstado,
@@ -291,10 +305,15 @@ class PagoController extends Controller
                 (float) $datos['monto'] >
                 $saldoDisponible
             ) {
-                abort(
-                    422,
-                    'El nuevo monto no puede superar el saldo disponible del crédito.'
-                );
+
+                throw ValidationException::withMessages([
+                    'monto' =>
+                        'El nuevo monto no puede superar el saldo disponible de $' .
+                        number_format(
+                            $saldoDisponible,
+                            2
+                        ) . '.'
+                ]);
             }
 
 

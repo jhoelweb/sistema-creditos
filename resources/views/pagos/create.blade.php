@@ -4,7 +4,6 @@
 <head>
 
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Registrar Pago</title>
@@ -84,6 +83,12 @@
             margin-bottom: 20px;
         }
 
+        .error-campo {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
         .info {
             background: #cff4fc;
             color: #055160;
@@ -102,7 +107,7 @@
 
     <h1>Registrar Pago</h1>
 
-
+    {{-- Mostrar errores generales --}}
     @if($errors->any())
 
         <div class="error">
@@ -139,6 +144,8 @@
         @csrf
 
 
+        {{-- CRÉDITO --}}
+
         <div class="campo">
 
             <label for="credito_id">
@@ -155,7 +162,6 @@
                     Selecciona un crédito
                 </option>
 
-
                 @foreach($creditos as $credito)
 
                     <option
@@ -164,11 +170,16 @@
                     >
 
                         Crédito #{{ $credito->id }}
+
                         -
+
                         {{ $credito->cliente->nombres }}
                         {{ $credito->cliente->apellidos }}
+
                         -
-                        Saldo: ${{ number_format($credito->saldo, 2) }}
+
+                        Saldo:
+                        ${{ number_format($credito->saldo, 2) }}
 
                     </option>
 
@@ -176,8 +187,18 @@
 
             </select>
 
+            @error('credito_id')
+
+                <div class="error-campo">
+                    {{ $message }}
+                </div>
+
+            @enderror
+
         </div>
 
+
+        {{-- FECHA --}}
 
         <div class="campo">
 
@@ -193,8 +214,18 @@
                 required
             >
 
+            @error('fecha_pago')
+
+                <div class="error-campo">
+                    {{ $message }}
+                </div>
+
+            @enderror
+
         </div>
 
+
+        {{-- MONTO --}}
 
         <div class="campo">
 
@@ -213,8 +244,19 @@
                 required
             >
 
+            {{-- Mensaje específico del monto --}}
+            @error('monto')
+
+                <div class="error-campo">
+                    {{ $message }}
+                </div>
+
+            @enderror
+
         </div>
 
+
+        {{-- REFERENCIA --}}
 
         <div class="campo">
 
@@ -230,8 +272,18 @@
                 placeholder="Ejemplo: REC-001"
             >
 
+            @error('referencia')
+
+                <div class="error-campo">
+                    {{ $message }}
+                </div>
+
+            @enderror
+
         </div>
 
+
+        {{-- OBSERVACIONES --}}
 
         <div class="campo">
 
@@ -245,8 +297,18 @@
                 placeholder="Observaciones del pago..."
             >{{ old('observaciones') }}</textarea>
 
+            @error('observaciones')
+
+                <div class="error-campo">
+                    {{ $message }}
+                </div>
+
+            @enderror
+
         </div>
 
+
+        {{-- BOTONES --}}
 
         <button
             type="submit"
